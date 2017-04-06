@@ -149,7 +149,11 @@ _Promise.prototype.catch = function(onRejected) {
   return this.then(null, onRejected)
 }
 
-// 根据x的值，决定promies2的状态和值。x为onResolved的返回值
+/*
+then返回的promise2的状态和值，由then注册的onResolved的返回值x决定
+如果x为普通值，直接调用promise2内部的resolve将x的值绑定到promise2上
+如果x是promise对象或thenable对象，调用then,然后将promise2中的resolve和reject注册为onResolved和onRejected。
+ */
 function resolvePromise(promise2, x, resolve, reject) {
   var then
   var thenCalledOrThrow = false
@@ -160,9 +164,8 @@ function resolvePromise(promise2, x, resolve, reject) {
   // x为_Promise对象
   if (x instanceof _Promise) {
     /**
-     * x的状态为pending，调用x的then方法
+     * x的状态为pending，此时x的值不确定，有可能还是promise对象所以调用x的then方法
      * 将x，resolve后的值value再次传入resolvePromise
-     *
      */
     if (x.status === 'pending') {
       x.then(function (value) {
@@ -191,6 +194,7 @@ function resolvePromise(promise2, x, resolve, reject) {
         then.call(x, function rs(y) {
           if (thenCalledOrThrow) return
           thenCalledOrThrow = true
+          //因为此时还是不确定y是什么类型的值，所以再次传入resolvePromise
           return resolvePromise(promise2, y, resolve, reject)
         }, function rj(r) {
           if (thenCalledOrThrow) return
